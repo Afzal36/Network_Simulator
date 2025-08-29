@@ -1,7 +1,7 @@
-import RouterSimulation from '@/components/RouterSimulation';
+import EnhancedRouterSimulation from '@/components/EnhancedRouterSimulation';
 
 const Index = () => {
-  return <RouterSimulation />;
+  return <EnhancedRouterSimulation />;
 };
 
 export default Index;
