@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Network Router Simulation Design System */
+@layer base {
+  :root {
+    /* Dark tech theme */
+    --background: 220 26% 8%;
+    --foreground: 180 100% 90%;
+
+    --card: 220 24% 12%;
+    --card-foreground: 180 100% 90%;
+
+    --popover: 220 24% 12%;
+    --popover-foreground: 180 100% 90%;
+
+    /* Network blue theme */
+    --primary: 180 100% 50%;
+    --primary-foreground: 220 26% 8%;
+    --primary-glow: 180 100% 60%;
+
+    --secondary: 220 24% 16%;
+    --secondary-foreground: 180 100% 90%;
+
+    --muted: 220 24% 14%;
+    --muted-foreground: 180 20% 60%;
+
+    --accent: 195 100% 45%;
+    --accent-foreground: 220 26% 8%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 180 100% 90%;
+
+    --border: 220 24% 20%;
+    --input: 220 24% 16%;
+    --ring: 180 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* Network specific colors */
+    --node-default: 220 24% 16%;
+    --node-source: 120 100% 50%;
+    --node-destination: 0 100% 60%;
+    --node-visited: 60 100% 50%;
+    --node-path: 180 100% 50%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-network: linear-gradient(45deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1));
+    --gradient-glass: linear-gradient(135deg, hsl(var(--card) / 0.8), hsl(var(--card) / 0.4));
+    
+    /* Shadows and effects */
+    --shadow-glow: 0 0 20px hsl(var(--primary) / 0.3);
+    --shadow-node: 0 4px 12px hsl(220 26% 4% / 0.4);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background: var(--gradient-network);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* Glass effect components */
+  .glass-panel {
+    background: var(--gradient-glass);
+    backdrop-filter: blur(10px);
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-node);
+  }
+  
+  /* SVG Network node styles */
+  .network-node {
+    fill: hsl(var(--node-default));
+    stroke: hsl(var(--border));
+    stroke-width: 2;
+    transition: var(--transition-smooth);
+  }
+  
+  .network-node.source {
+    fill: hsl(var(--node-source));
+    filter: drop-shadow(0 0 8px hsl(var(--node-source) / 0.6));
+  }
+  
+  .network-node.destination {
+    fill: hsl(var(--node-destination));
+    filter: drop-shadow(0 0 8px hsl(var(--node-destination) / 0.6));
+  }
+  
+  .network-node.visited {
+    fill: hsl(var(--node-visited));
+    filter: drop-shadow(0 0 6px hsl(var(--node-visited) / 0.5));
+  }
+  
+  .network-node.path {
+    fill: hsl(var(--node-path));
+    filter: drop-shadow(0 0 10px hsl(var(--node-path) / 0.8));
+    animation: pulse 2s infinite;
+  }
+  
+  /* SVG Edge styles */
+  .network-edge {
+    stroke: hsl(var(--border));
+    stroke-width: 2;
+    transition: var(--transition-smooth);
+  }
+  
+  .network-edge.visited {
+    stroke: hsl(var(--node-visited));
+    stroke-width: 3;
+  }
+  
+  .network-edge.path {
+    stroke: hsl(var(--primary));
+    stroke-width: 4;
+    filter: drop-shadow(0 0 4px hsl(var(--primary) / 0.7));
+  }
+}
+
+@layer utilities {
+  /* Custom animations */
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+  }
+  
+  @keyframes dash {
+    to {
+      stroke-dashoffset: -10;
+    }
+  }
+  
+  @keyframes glow {
+    0%, 100% {
+      box-shadow: 0 0 5px hsl(var(--primary) / 0.5);
+    }
+    50% {
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.8);
+    }
+  }
+  
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
+}
