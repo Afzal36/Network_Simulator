@@ -10,7 +10,6 @@ import { Node, Edge } from './NetworkGraph';
 import RoutingTable from './RoutingTable';
 import { DijkstraAlgorithm } from '@/algorithms/DijkstraAlgorithm';
 import { BellmanFordAlgorithm } from '@/algorithms/BellmanFord';
-import { BGPPathSelection } from '@/algorithms/BGPPathSelection';
 import type { AlgorithmResult } from '@/algorithms/BellmanFord';
 
 interface AlgorithmComparisonProps {
@@ -52,12 +51,6 @@ const AlgorithmComparison: React.FC<AlgorithmComparisonProps> = ({
       description: 'RIP-like: Distance vector, handles negative weights',
       execute: BellmanFordAlgorithm.execute,
       color: 'green'
-    },
-    { 
-      name: 'BGP', 
-      description: 'Path vector: Policy-based routing with multiple criteria',
-      execute: BGPPathSelection.execute,
-      color: 'purple'
     },
   ];
 
@@ -279,7 +272,7 @@ const AlgorithmComparison: React.FC<AlgorithmComparisonProps> = ({
       {/* Routing Tables */}
       {Object.keys(results).length > 0 && (
         <Tabs defaultValue={algorithms[0].name} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             {algorithms.map((alg) => (
               <TabsTrigger 
                 key={alg.name} 

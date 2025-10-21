@@ -39,6 +39,7 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
   const [selectedWeight, setSelectedWeight] = useState<number>(5);
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [topologyName, setTopologyName] = useState<string>('My Network');
+  const [routerName, setRouterName] = useState<string>('');
 
   // Initialize canvas
   useEffect(() => {
@@ -120,12 +121,14 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
       fabricCanvas.off('mouse:dblclick', handleObjectDoubleClick);
       fabricCanvas.off('object:modified', handleObjectMoved);
     };
-  }, [fabricCanvas, mode, connectingFrom, selectedWeight]);
+  }, [fabricCanvas, mode, connectingFrom, selectedWeight, routerName]);
 
   const addRouter = useCallback((x: number, y: number) => {
     if (!fabricCanvas) return;
 
     const nodeId = `R${Date.now()}`;
+    const displayName = routerName.trim() || nodeId;
+    
     const router = new Circle({
       left: x - 20,
       top: y - 20,
@@ -140,9 +143,9 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
 
     // Add custom properties
     (router as any).nodeId = nodeId;
-    (router as any).nodeLabel = nodeId;
+    (router as any).nodeLabel = displayName;
 
-    const label = new FabricText(nodeId, {
+    const label = new FabricText(displayName, {
       left: x,
       top: y,
       fontSize: 12,
@@ -153,11 +156,16 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
       selectable: false,
       evented: false,
     });
+    
+    // Link label to router
+    (label as any).nodeId = nodeId;
+    (label as any).isLabel = true;
 
     fabricCanvas.add(router, label);
     updateTopologyFromCanvas();
-    toast(`Router ${nodeId} added`);
-  }, [fabricCanvas]);
+    toast(`Router ${displayName} added`);
+    setRouterName(''); // Clear name after adding
+  }, [fabricCanvas, routerName]);
 
   const handleNodeClick = useCallback((nodeId: string) => {
     if (mode !== 'connect') return;
@@ -231,6 +239,7 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
       evented: false,
     });
 
+    (weightLabel as any).isWeightLabel = true;
     (connection as any).weightText = weightLabel;
 
     fabricCanvas.add(connection, weightLabel);
@@ -246,15 +255,16 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    // Extract nodes
+    // Extract nodes (only router circles, skip labels)
     objects.forEach(obj => {
-      if ((obj as any).nodeId) {
+      if ((obj as any).nodeId && !(obj as any).isLabel) {
         const center = obj.getCenterPoint();
+        const labelText = (obj as any).nodeLabel || (obj as any).nodeId;
         nodes.push({
           id: (obj as any).nodeId,
           x: center.x,
           y: center.y,
-          label: (obj as any).nodeLabel,
+          label: labelText,
           status: 'default',
         });
       }
@@ -283,7 +293,7 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
     // Clear existing objects (except grid)
     const objects = fabricCanvas.getObjects();
     objects.forEach(obj => {
-      if ((obj as any).nodeId || (obj as any).edgeId || (obj as FabricText).text) {
+      if ((obj as any).nodeId || (obj as any).edgeId || (obj as any).isLabel) {
         fabricCanvas.remove(obj);
       }
     });
@@ -303,10 +313,11 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
       });
 
       // Add custom properties
+      const labelText = node.label || node.id;
       (router as any).nodeId = node.id;
-      (router as any).nodeLabel = node.label;
+      (router as any).nodeLabel = labelText;
 
-      const label = new FabricText(node.label, {
+      const label = new FabricText(labelText, {
         left: node.x,
         top: node.y,
         fontSize: 12,
@@ -317,6 +328,10 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
         selectable: false,
         evented: false,
       });
+      
+      // Link label to router
+      (label as any).nodeId = node.id;
+      (label as any).isLabel = true;
 
       fabricCanvas.add(router, label);
     });
@@ -357,6 +372,7 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
           evented: false,
         });
 
+        (weightLabel as any).isWeightLabel = true;
         (connection as any).weightText = weightLabel;
         fabricCanvas.add(connection, weightLabel);
         fabricCanvas.add(connection, weightLabel);
@@ -371,7 +387,7 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
 
     const objects = fabricCanvas.getObjects();
     objects.forEach(obj => {
-      if ((obj as any).nodeId || (obj as any).edgeId || (obj as FabricText).text) {
+      if ((obj as any).nodeId || (obj as any).edgeId || (obj as any).isLabel || (obj as any).isWeightLabel) {
         fabricCanvas.remove(obj);
       }
     });
@@ -386,34 +402,45 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
 
     const activeObjects = fabricCanvas.getActiveObjects();
     activeObjects.forEach(obj => {
-      // If deleting a node, also delete connected edges
-      if ((obj as any).nodeId) {
-        const nodeId = (obj as any).nodeId;
-        const connectedEdges = fabricCanvas.getObjects().filter(o => 
-          (o as any).edgeId && 
-          ((o as any).edgeId.includes(nodeId))
-        );
-        connectedEdges.forEach(edge => {
-          if ((edge as any).weightText) {
-            fabricCanvas.remove((edge as any).weightText);
+    // If deleting a node, also delete connected edges
+    if ((obj as any).nodeId) {
+      const nodeId = (obj as any).nodeId;
+
+      // Find connected edges
+      const connectedEdges = fabricCanvas.getObjects().filter(o => 
+        (o as any).edgeId && ((o as any).edgeId.includes(nodeId))
+      );
+
+      connectedEdges.forEach(edge => {
+        // Remove all weight labels associated with edges
+        fabricCanvas.getObjects().forEach(o => {
+          if ((o as any).isWeightLabel && ((o as any).edgeId === (edge as any).edgeId)) {
+            fabricCanvas.remove(o);
           }
-          fabricCanvas.remove(edge);
         });
-        
-        // Remove node label
-        const label = fabricCanvas.getObjects().find(o => 
-          o instanceof FabricText && Math.abs(o.left! - (obj.left! + 20)) < 5 && Math.abs(o.top! - (obj.top! + 20)) < 5
-        );
-        if (label) fabricCanvas.remove(label);
-      }
-      
-      // If deleting an edge, remove its weight label
-      if ((obj as any).edgeId && (obj as any).weightText) {
-        fabricCanvas.remove((obj as any).weightText);
-      }
-      
+        fabricCanvas.remove(edge);
+      });
+
+      // Remove node label
+      const label = fabricCanvas.getObjects().find(o => 
+        (o as any).isLabel && (o as any).nodeId === nodeId
+      );
+      if (label) fabricCanvas.remove(label);
+    }
+
+    // If deleting an edge directly
+    if ((obj as any).edgeId) {
+      fabricCanvas.getObjects().forEach(o => {
+        if ((o as any).isWeightLabel && ((o as any).edgeId === (obj as any).edgeId)) {
+          fabricCanvas.remove(o);
+        }
+      });
       fabricCanvas.remove(obj);
-    });
+    }
+
+    // Finally remove the object itself
+    fabricCanvas.remove(obj);
+  });
 
     fabricCanvas.discardActiveObject();
     fabricCanvas.renderAll();
@@ -428,13 +455,13 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
 
     // Extract current topology
     objects.forEach(obj => {
-      if ((obj as any).nodeId) {
+      if ((obj as any).nodeId && !(obj as any).isLabel) {
         const center = obj.getCenterPoint();
         nodes.push({
           id: (obj as any).nodeId,
           x: center.x,
           y: center.y,
-          label: (obj as any).nodeLabel,
+          label: (obj as any).nodeLabel || (obj as any).nodeId,
           status: 'default',
         });
       }
@@ -534,6 +561,21 @@ const TopologyBuilder: React.FC<TopologyBuilderProps> = ({
               Clear
             </Button>
           </div>
+
+          {/* Router Name Input */}
+          {mode === 'router' && (
+            <div className="flex items-center gap-2">
+              <Label htmlFor="router-name" className="text-sm">Router Name:</Label>
+              <Input
+                id="router-name"
+                type="text"
+                value={routerName}
+                onChange={(e) => setRouterName(e.target.value)}
+                className="flex-1"
+                placeholder="Optional (auto-generated if empty)"
+              />
+            </div>
+          )}
 
           {/* Connection Weight */}
           {mode === 'connect' && (
